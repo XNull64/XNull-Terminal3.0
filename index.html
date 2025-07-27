@@ -1,0 +1,1911 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XNull Terminal v3.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-primary: #00ff99;
+            --neon-secondary: #00ccff;
+            --neon-accent: #cc00ff;
+            --dark-1: #011a13;
+            --dark-2: #000a06;
+            --light-1: #f0fff7;
+            --light-2: #e0f7ef;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Fira Code', monospace;
+            background-color: var(--dark-2);
+            color: var(--neon-primary);
+            overflow-x: hidden;
+            min-height: 100vh; /* Tam ekran yüksekliği */
+            line-height: 1.6;
+            display: flex; /* Terminali ortalamak için */
+            justify-content: center;
+            align-items: center;
+        }
+
+        body.light {
+            background-color: var(--light-1);
+            color: #065f46;
+        }
+
+        /* Yeni Pencere Kontrolleri */
+        .window-controls {
+            display: flex;
+            gap: 8px;
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 10000;
+        }
+
+        .window-btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            position: relative; /* Ok ikonu için */
+            transition: all 0.2s ease; /* Genel geçişler için */
+        }
+
+        .close-btn { background-color: #ff5f56; }
+        .minimize-btn { background-color: #ffbd2e; }
+        .maximize-btn { background-color: #27c93f; }
+
+        /* Yeni Geri Tuşu Stili */
+        .back-btn {
+            background-color: var(--neon-secondary); /* Tema rengine uygun */
+            display: none; /* Başlangıçta gizli */
+            opacity: 0; /* Animasyon başlangıcı için */
+            transform: translateX(-10px); /* Animasyon başlangıcı için */
+            width: 24px; /* Buton boyutunu büyüttük */
+            height: 24px; /* Buton boyutunu büyüttük */
+            border-radius: 50%; /* Yuvarlak kalması için */
+            border: 2px solid var(--neon-primary); /* Kenarlık ekledik */
+            box-shadow: 0 0 8px rgba(0, 204, 255, 0.6); /* Gölge ekledik */
+            transition: all 0.3s ease; /* Boyut ve renk geçişleri için */
+        }
+        .back-btn::before {
+            content: '←'; /* Geri ok ikonu */
+            color: var(--dark-2); /* Ok rengini daha kontrastlı yaptık */
+            font-size: 16px; /* Oku büyüttük */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: bold;
+        }
+        /* Geri Tuşu Hover Efekti */
+        .back-btn:hover {
+            transform: translateX(0) scale(1.1);
+            box-shadow: 0 0 15px rgba(0, 204, 255, 0.9);
+            background-color: var(--neon-accent); /* Hover'da farklı renk */
+        }
+        .back-btn:hover::before {
+            color: var(--light-1); /* Hover'da okun rengi */
+        }
+
+
+        /* Geri Tuşu Animasyonu */
+        @keyframes slideInLeftFadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Terminal Konteyneri */
+        #terminal {
+            position: fixed; /* Fixed yerine absolute de kullanılabilir ama popup'ı örtmesin diye fixed daha iyi */
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 900px;
+            height: 80vh;
+            background: rgba(1, 20, 15, 0.92);
+            border: 2px solid var(--neon-primary);
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 255, 153, 0.3),
+                        0 0 60px rgba(0, 255, 153, 0.1) inset;
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        /* Hidden Pages */
+        .hidden-page {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 900px;
+            height: 80vh;
+            background: rgba(1, 20, 15, 0.92);
+            border: 2px solid var(--neon-primary);
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 255, 153, 0.3),
+                        0 0 60px rgba(0, 255, 153, 0.1) inset;
+            backdrop-filter: blur(8px);
+            display: none; /* Varsayılan olarak gizli */
+            flex-direction: column;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            z-index: 90; /* Terminalden daha az z-index */
+        }
+
+
+        /* Terminal Başlık Çubuğu */
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background: rgba(0, 20, 10, 0.8);
+            border-bottom: 1px solid var(--neon-primary);
+        }
+
+        .terminal-title {
+            display: flex;
+            align-items: center;
+            gap: 8px; /* İkon, tuş ve metin arasına boşluk */
+        }
+
+        .terminal-icon {
+            width: 16px;
+            height: 16px;
+            background: var(--neon-primary);
+            border-radius: 4px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #27c93f;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Terminal İçeriği */
+        .terminal-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            color: var(--neon-primary); /* İçerik rengini tema ile uyumlu hale getir */
+        }
+
+        /* Buton Grupları */
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: rgba(0, 255, 153, 0.1);
+            border: 2px solid var(--neon-primary);
+            color: var(--neon-primary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Fira Code', monospace;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: var(--neon-primary);
+            color: #002211;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 153, 0.4);
+        }
+
+        /* Giriş Alanları */
+        .input-field {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(0, 20, 10, 0.7);
+            border: 2px solid var(--neon-primary);
+            color: var(--neon-primary);
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: 'Fira Code', monospace;
+            font-size: 16px;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--neon-secondary);
+            box-shadow: 0 0 10px rgba(0, 204, 255, 0.5);
+        }
+
+        /* Çıktı Alanı */
+        #output, #scriptOutput, #hashOutput, #scanOutput, #encodeOutput, #passwordOutput, #egitimOutput, #socialMediaOutput { /* Yeni çıktı alanı eklendi */
+            background: rgba(0, 30, 15, 0.6);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 3px solid var(--neon-primary);
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 15px;
+            line-height: 1.5;
+            color: var(--neon-primary); /* Çıktı rengini tema ile uyumlu hale getir */
+            white-space: pre-wrap; /* Pre elementleri için kelime kaydırma */
+            word-wrap: break-word; /* Uzun kelimeleri kırma */
+        }
+
+        /* Matrix Arka Plan */
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            opacity: 0.3;
+        }
+
+        /* Responsive Düzen */
+        @media (max-width: 768px) {
+            #terminal, .hidden-page {
+                width: 95%;
+                height: 90vh;
+                top: 50%;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        /* 3D Efekt */
+        .terminal-3d {
+            transform-style: preserve-3d;
+            perspective: 1000px;
+            /* Transition buraya eklendi, böylece fare hareketi olmasa bile diğer transformlar yumuşak olur */
+            transition: transform 0.3s ease; 
+        }
+
+        /* Tema Butonu */
+        #themeToggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 20, 10, 0.7);
+            border: 2px solid var(--neon-primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10000;
+            transition: all 0.3s ease;
+        }
+
+        #themeToggle:hover {
+            transform: rotate(30deg) scale(1.1);
+            background: var(--neon-primary);
+        }
+
+        #themeToggle svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--neon-primary);
+        }
+
+        #themeToggle:hover svg {
+            fill: #002211;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background-color: rgba(0, 255, 153, 0.1);
+            border-radius: 5px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            width: 0%;
+            background-color: var(--neon-primary);
+            transition: width 0.1s linear;
+        }
+
+        /* Text Reveal Animation */
+        @keyframes textReveal {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Floating Heart Animation for Instagram Post */
+        @keyframes floatUp {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-50px); }
+        }
+
+        /* Welcome Popup Styles */
+        #welcome-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.9); /* Yarı şeffaf arka plan */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10001; /* Diğer her şeyin üstünde */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease;
+        }
+
+        #welcome-popup {
+            background: rgba(1, 20, 15, 0.95);
+            border: 2px solid var(--neon-secondary);
+            border-radius: 10px;
+            box-shadow: 0 0 40px rgba(0, 204, 255, 0.6);
+            padding: 30px;
+            text-align: center;
+            color: var(--neon-primary);
+            width: 80%;
+            max-width: 500px;
+            transform: scale(0.8);
+            transition: transform 0.5s ease;
+        }
+
+        #welcome-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        #welcome-overlay.visible #welcome-popup {
+            transform: scale(1);
+        }
+
+        #welcome-popup h2 {
+            font-size: 2em;
+            margin-bottom: 20px;
+            color: var(--neon-accent);
+            text-shadow: 0 0 10px rgba(204, 0, 255, 0.8);
+        }
+
+        #welcome-popup p {
+            margin-bottom: 25px;
+            line-height: 1.8;
+        }
+
+        #welcome-popup .close-popup-btn {
+            background: var(--neon-primary);
+            color: var(--dark-2);
+            border: none;
+            padding: 10px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Fira Code', monospace;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        #welcome-popup .close-popup-btn:hover {
+            background: var(--neon-secondary);
+            color: var(--light-1);
+            box-shadow: 0 0 15px rgba(0, 204, 255, 0.8);
+            transform: translateY(-2px);
+        }
+
+        /* Eğitimler Sayfası Stilleri */
+        .video-item {
+            background: rgba(0, 255, 153, 0.05);
+            padding: 15px;
+            border-left: 3px solid var(--neon-secondary);
+            margin-bottom: 15px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .video-item h3 {
+            color: var(--neon-accent);
+            margin-bottom: 5px;
+        }
+        .video-item p {
+            font-size: 0.9em;
+            color: var(--neon-primary);
+        }
+        .video-item a {
+            color: var(--neon-secondary);
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.2s ease;
+        }
+        .video-item a:hover {
+            color: var(--neon-primary);
+            text-decoration: underline;
+        }
+        .video-embed {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            height: 0;
+            overflow: hidden;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .video-embed iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+    </style>
+</head>
+<body class="dark">
+
+<canvas class="matrix-bg" id="matrixCanvas"></canvas>
+
+<div id="welcome-overlay">
+    <div id="welcome-popup">
+        <h2>🚀 XNull Terminal'e Hoş Geldiniz!</h2>
+        <p>
+            Siber güvenlik dünyasına adım atmak için buradasınız. Bu terminal, sanal araçlar ve simülasyonlar ile yeteneklerinizi geliştirmeniz için tasarlanmıştır. <br>
+            **En güncel bilgiler ve ipuçları için bizi Instagram'da takip edin:** <span style="color: var(--neon-accent); font-weight: bold;">@drexlorx_xnull</span><br>
+            Keyifli hacklemeler!
+        </p>
+        <button class="close-popup-btn" onclick="closeWelcomePopup()">Başlat</button>
+    </div>
+</div>
+
+<div class="window-controls">
+    <div class="window-btn close-btn" onclick="closeTerminal()"></div>
+    <div class="window-btn minimize-btn" onclick="minimizeTerminal()"></div>
+    <div class="window-btn maximize-btn" onclick="maximizeTerminal()"></div>
+</div>
+
+<button id="themeToggle" title="Tema değiştir">
+    <svg viewBox="0 0 24 24">
+        <path d="M12 3a9 9 0 0 0 0 18 9 9 0 0 0 0-18zm0 16a7 7 0 0 1 0-14 7 7 0 0 1 0 14z"/>
+    </svg>
+</button>
+
+<div id="terminal" class="terminal-3d">
+    <div class="terminal-header">
+        <div class="terminal-title">
+            <div class="terminal-icon"></div>
+            <span>XNull Terminal v3.0</span>
+        </div>
+        <div class="connection-status">
+            <div class="status-indicator"></div>
+            <span>Connected</span>
+        </div>
+    </div>
+    
+    <div class="terminal-content">
+        <h1 style="font-size: 24px; margin-bottom: 15px; background: linear-gradient(90deg, var(--neon-primary), var(--neon-secondary)); -webkit-background-clip: text; background-clip: text; color: transparent;">XNull Cyber Terminal</h1>
+        
+        <div class="system-info">
+            <p><strong>🕒 Tarih/Saat:</strong> <span id="datetime"></span></p>
+            <p><strong>🌐 IP Adresiniz:</strong> <span id="ip"></span></p>
+            <p><strong>🔍 Tarayıcı:</strong> <span id="browser"></span> / <strong>💻 İşletim Sistemi:</strong> <span id="os"></span></p>
+            <p><strong>👣 Ziyaret Sayınız:</strong> <span id="visits"></span></p>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn" onclick="goScripts()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                Scriptler
+            </button>
+            <button class="btn" onclick="goTools()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4v16m8-8H4"/></svg>
+                Araçlar
+            </button>
+            <button class="btn" onclick="goContact()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 7l10 7 10-7"/></svg>
+                İletişim
+            </button>
+            <button class="btn" onclick="goEgitimler()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 6v12l10 4 10-4V6L12 2zm0 2.232L18 6.5v8.948L12 19.768 6 15.448V6.5L12 4.232zM12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></svg>
+                Eğitimler
+            </button>
+            <button class="btn" onclick="goSocialMedia()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7.8 2c-2.071 0-2.339.006-3.15.045-.81.04-.984.148-1.348.29-.36.143-.68.324-.982.628-.303.303-.485.62-.628.982-.143.364-.25.538-.29.1348C2.006 4.661 2 4.93 2 7v8c0 2.071.006 2.339.045 3.15.04.81.148.984.29 1.348.143.36.324.68.628.982.303.303.62.485.982.628.364.143.538.25.1348.29.81.039 1.079.045 3.15.045h8c2.071 0 2.339-.006 3.15-.045.81-.04.984-.148 1.348-.29.36-.143.68-.324.982-.628.303.303.62.485.982.628.364.143.538.25.1348.29-.81.039-1.079-.045-3.15-.045zm0 2h8c1.972 0 2.222.005 3.012.044.78.038.835.11.97.165.25.103.475.215.687.427.21.21.322.437.425.687.055.135.127.19.165.97.039.79.044 1.04.044 3.012v8c0 1.972-.005 2.222-.044 3.012-.038.78-.11.835-.165.97-.103.25-.215.475-.427.687-.21.21-.437.322-.687.425-.135.055-.19.127-.97.165-.79.039-1.04.044-3.012.044h-8c-1.972 0-2.222-.005-3.012-.044-.78-.038-.835-.11-.97-.165-.25-.103-.475-.215-.687-.427-.21-.21-.437-.322-.425-.687.055-.135.127-.19.165-.97-.039-.79-.044-1.04-.044-3.012v-8c0-1.972.005-2.222.044-3.012.038-.78.11-.835.165-.97.103.25.215.475.427-.687.21.21.437.322.425-.687.055-.135.127-.19.165-.97.039-.79.044-1.04.044-3.012zm5.2 2.8a4.2 4.2 0 1 0 0 8.4 4.2 4.2 0 0 0 0-8.4zm0 2a2.2 2.2 0 1 1 0 4.4 2.2 2.2 0 0 1 0-4.4zM17.4 5.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+                </svg>
+                Sosyal Medya
+            </button>
+            <button class="btn" onclick="clearOutput()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h18M6 6v12a3 3 0 0 0 3 3h6a3 0 0 0 3-3V6"/></svg>
+                Temizle
+            </button>
+        </div>
+
+        <input id="commandInput" class="input-field" placeholder="Komut yazın ve Enter'a basın..." autocomplete="off" spellcheck="false">
+        
+        <pre id="output"></pre>
+        
+        <div id="fake-instagram-post" style="display: none; margin-top: 20px; padding: 15px; background: rgba(0, 20, 10, 0.8); border-radius: 8px; border: 1px solid var(--neon-primary);">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <div style="width: 40px; height: 40px; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366); border-radius: 50%;"></div>
+                <strong>xnull.security</strong>
+            </div>
+            <p id="post-content"></p>
+            <div style="display: flex; margin-top: 10px;">
+                <button class="btn" onclick="likePost()" style="background: none; border: none; color: #ff0055; padding: 5px 10px;">
+                    ❤️ <span id="like-count">0</span>
+                </button>
+                <button class="btn" onclick="addComment()" style="background: none; border: none; color: var(--neon-primary); padding: 5px 10px;">
+                    💬 <span id="comment-count">0</span>
+                </button>
+            </div>
+            <div id="comments" style="margin-top: 10px;"></div>
+        </div>
+    </div>
+</div>
+
+<div id="scripts" class="hidden-page">
+    <div class="terminal-header">
+        <div class="terminal-title">
+            <div class="terminal-icon"></div>
+            <div id="backBtnScripts" class="window-btn back-btn" onclick="goBack()"></div> <span>Script Galerisi</span>
+        </div>
+    </div>
+    <div class="terminal-content">
+        <h2 style="font-size: 20px; margin-bottom: 15px;">📝 Script Galerisi</h2>
+        <div class="btn-group">
+            <button class="btn" onclick="runScriptCommand('demo1')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                Demo Script 1
+            </button>
+            <button class="btn" onclick="runScriptCommand('demo2')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                Demo Script 2
+            </button>
+            <button class="btn" onclick="runScriptCommand('demo3')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                Demo Script 3
+            </button>
+        </div>
+        <input id="scriptInput" class="input-field" placeholder="Script komutunu girin (demo1, demo2, demo3)" onkeydown="scriptInputHandler(event)" autocomplete="off" spellcheck="false">
+        <pre id="scriptOutput" style="background: rgba(0, 30, 15, 0.6); padding: 15px; border-radius: 8px; margin-top: 15px;"></pre>
+    </div>
+</div>
+
+<div id="tools" class="hidden-page">
+    <div class="terminal-header">
+        <div class="terminal-title">
+            <div class="terminal-icon"></div>
+            <div id="backBtnTools" class="window-btn back-btn" onclick="goBack()"></div> <span>Hacking Araçları</span>
+        </div>
+    </div>
+    <div class="terminal-content">
+        <h2 style="font-size: 20px; margin-bottom: 15px;">🛠️ Hacking Araç Kiti</h2>
+        <div class="btn-group">
+            <button class="btn" onclick="runTool('hash')">
+                🔑 SHA-256 Hash
+            </button>
+            <button class="btn" onclick="runTool('scan')">
+                🔍 Port Tarayıcı
+            </button>
+            <button class="btn" onclick="runTool('encoder')">
+                🔣 Base64 Encoder
+            </button>
+            <button class="btn" onclick="runTool('password')">
+                🔒 Şifre Üretici
+            </button>
+        </div>
+        <div id="tool-content">
+            </div>
+    </div>
+</div>
+
+<div id="contact" class="hidden-page">
+    <div class="terminal-header">
+        <div class="terminal-title">
+            <div class="terminal-icon"></div>
+            <div id="backBtnContact" class="window-btn back-btn" onclick="goBack()"></div> <span>İletişim Formu</span>
+        </div>
+    </div>
+    <div class="terminal-content">
+        <h2 style="font-size: 20px; margin-bottom: 15px;">📬 Hacker İletişim</h2>
+        <form id="contactForm" onsubmit="sendMessage(event)">
+            <label style="display: block; margin-top: 15px;">👤 Kod Adınız:</label>
+            <input id="name" type="text" class="input-field" autocomplete="off" spellcheck="false">
+            
+            <label style="display: block; margin-top: 15px;">📧 Gizli Email:</label>
+            <input id="email" type="email" class="input-field" autocomplete="off" spellcheck="false">
+            
+            <label style="display: block; margin-top: 15px;">💬 Şifreli Mesaj:</label>
+            <textarea id="message" rows="4" class="input-field" autocomplete="off" spellcheck="false"></textarea>
+            
+            <button type="submit" class="btn" style="margin-top: 15px; width: 100%; background: var(--neon-primary); color: #002211;">
+                🚀 Gönder
+            </button>
+        </form>
+        <p id="contactResult" style="margin-top: 15px; padding: 10px; border-radius: 5px;"></p>
+    </div>
+</div>
+
+<div id="egitimler" class="hidden-page">
+    <div class="terminal-header">
+        <div class="terminal-title">
+            <div class="terminal-icon"></div>
+            <div id="backBtnEgitimler" class="window-btn back-btn" onclick="goBack()"></div> <span>Eğitimler</span>
+        </div>
+    </div>
+    <div class="terminal-content">
+        <h2 style="font-size: 20px; margin-bottom: 15px;">📚 Siber Güvenlik Eğitimleri</h2>
+        <p style="margin-bottom: 20px;">
+            Siber güvenlik alanında kendinizi geliştirmek için özenle seçilmiş eğitim videolarına buradan ulaşabilirsiniz.
+        </p>
+
+        <div class="video-item">
+            <h3>1. Siber Güvenliğe Giriş</h3>
+            <p>Siber güvenlik nedir, temel kavramlar, neden önemlidir? Bu video ile siber güvenliğe ilk adımı atın.</p>
+            <div class="video-embed">
+                <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ?si=abcdefghijk" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+            </div>
+            <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank">Videoyu YouTube'da İzle</a>
+        </div>
+
+        <div class="video-item">
+            <h3>2. Penetrasyon Testi Temelleri</h3>
+            <p>Penetrasyon testinin adımları, kullanılan temel araçlar ve etik hacker'lık hakkında bilgi edinin.</p>
+            <div class="video-embed">
+                <iframe src="https://www.youtube.com/embed/qgO1D6vYd6M?si=abcdefghijk" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+            </div>
+            <a href="https://www.youtube.com/watch?v=qgO1D6vYd6M" target="_blank">Videoyu YouTube'da İzle</a>
+        </div>
+        
+        <div class="video-item">
+            <h3>3. Temel Ağ Güvenliği</h3>
+            <p>Ağ katmanları, güvenlik açıkları ve ağ saldırılarından korunma yöntemleri hakkında bilgi sahibi olun.</p>
+            <div class="video-embed">
+                <iframe src="https://www.youtube.com/embed/BBm6tI-0F_g?si=abcdefghijk" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+            </div>
+            <a href="https://www.youtube.com/watch?v=BBm6tI-0F_g" target="_blank">Videoyu YouTube'da İzle</a>
+        </div>
+
+        <p style="margin-top: 30px; text-align: center; color: var(--neon-accent);">
+            Daha fazla eğitim videosu çok yakında eklenecektir!
+        </p>
+    </div>
+</div>
+
+<div id="social-media-page" class="hidden-page">
+    <div class="terminal-header">
+        <div class="terminal-title">
+            <div class="terminal-icon"></div>
+            <div id="backBtnSocialMedia" class="window-btn back-btn" onclick="goBack()"></div> <span>Sosyal Medya Hesapları</span>
+        </div>
+    </div>
+    <div class="terminal-content">
+        <h2 style="font-size: 20px; margin-bottom: 15px;">🌍 Sosyal Medya Hesaplarımız</h2>
+        <p style="margin-bottom: 20px;">
+            En güncel haberler, ipuçları ve içeriklerimiz için bizi sosyal medya platformlarımızdan takip edebilirsiniz.
+        </p>
+        <div class="social-media-links">
+            <div class="video-item"> <h3>Instagram</h3>
+                <p>En güncel duyurular, görseller ve kısa videolar için takipte kalın.</p>
+                <a href="https://www.instagram.com/drexlorx_x/" target="_blank">@drexlorx_xnull Instagram Hesabı</a>
+            </div>
+            <div class="video-item">
+                <h3>GitHub</h3>
+                <p>Açık kaynak projelerimizi ve kodlarımızı buradan inceleyebilirsiniz.</p>
+                <a href="https://github.com/xnullsec" target="_blank">xnullsec GitHub Profili</a>
+            </div>
+            <div class="video-item">
+                <h3>Twitter (X)</h3>
+                <p>Hızlı güncellemeler ve kısa paylaşımlar için bizi takip edin.</p>
+                <a href="https://twitter.com/xnullsec" target="_blank">@xnullsec Twitter Hesabı</a>
+            </div>
+            <div class="video-item">
+                <h3>LinkedIn</h3>
+                <p>Profesyonel ağımızı genişletmek ve işbirlikleri için bize ulaşın.</p>
+                <a href="https://linkedin.com/in/xnullsec" target="_blank">xnullsec LinkedIn Profili</a>
+            </div>
+        </div>
+        <p style="margin-top: 30px; text-align: center; color: var(--neon-accent);">
+            Sosyal medya ekibimizle iletişime geçmekten çekinmeyin!
+        </p>
+    </div>
+</div>
+
+
+<script>
+    // ========== GLOBAL DEĞİŞKENLER ==========
+    let commandHistory = [];
+    let historyIndex = -1;
+    let ctfLevel = 0;
+    let likes = 0;
+    let comments = 0;
+    let currentTheme = 'matrix'; // Başlangıç temasını belirle
+    const commandCache = {};
+    const aliases = {
+        "ll": "ls -la",
+        "..": "cd ..",
+        "list": "ls"
+    };
+    let matrixChars = "日ﾊｯｱｸﾞｰﾋﾟｼｽﾄｳﾁﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍﾘｦﾛｮﾚﾙﾆ"; // Matrix karakter seti
+
+    // ========== MATRIX EFEKTI ==========
+    function initMatrixEffect() {
+        const canvas = document.getElementById('matrixCanvas');
+        if (!canvas) { // Canvas elementi bulunamazsa uyarı ver
+            console.warn("Matrix Canvas elementi bulunamadı. Matrix efekti başlatılamıyor.");
+            return;
+        }
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const fontSize = 18;
+        const columns = canvas.width / fontSize;
+        let drops = Array(Math.floor(columns)).fill(1);
+
+        function draw() {
+            ctx.fillStyle = 'rgba(0, 10, 5, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            for (let i = 0; i < drops.length; i++) {
+                const text = matrixChars[Math.floor(Math.random() * matrixChars.length)]; // matrixChars kullan
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--neon-primary'); // Tema rengini kullan
+                ctx.font = `${fontSize}px 'Fira Code', monospace`;
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+        
+        setInterval(draw, 33);
+    }
+
+    // ========== TERMINAL FONKSIYONLARI ==========
+    const output = document.getElementById("output");
+    const input = document.getElementById("commandInput");
+    // Her sayfa için geri tuşlarını ayrı ayrı al
+    const backButtonScripts = document.getElementById("backBtnScripts");
+    const backButtonTools = document.getElementById("backBtnTools");
+    const backButtonContact = document.getElementById("backBtnContact");
+    const backButtonEgitimler = document.getElementById("backBtnEgitimler"); 
+    const backButtonSocialMedia = document.getElementById("backBtnSocialMedia"); // Yeni Sosyal Medya geri tuşu
+
+    // Tarih & Saat
+    function updateDateTime() {
+        const now = new Date();
+        const options = { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        };
+        document.getElementById("datetime").textContent = now.toLocaleString('tr-TR', options);
+    }
+    setInterval(updateDateTime, 1000);
+    updateDateTime();
+
+    // IP bilgisi
+    function getIP() {
+        fetch("https://ipapi.co/json/")
+            .then(res => res.json())
+            .then(data => {
+                const ipText = `${data.ip} (${data.city}, ${data.country_name})`;
+                document.getElementById("ip").textContent = ipText || "Bilinmiyor";
+            })
+            .catch(() => {
+                document.getElementById("ip").textContent = "IP bilgisi alınamadı";
+            });
+    }
+    getIP();
+
+    // Browser & OS
+    function getBrowserOS() {
+        const ua = navigator.userAgent;
+        let browser = "Bilinmiyor";
+        let os = "Bilinmiyor";
+
+        if(/firefox/i.test(ua)) browser = "Firefox";
+        else if(/chrome|chromium|crios/i.test(ua)) browser = "Chrome";
+        else if(/safari/i.test(ua)) browser = "Safari";
+        else if(/edg/i.test(ua)) browser = "Edge";
+        else if(/opera|opr/i.test(ua)) browser = "Opera";
+
+        if(/windows/i.test(ua)) os = "Windows";
+        else if(/macintosh/i.test(ua)) os = "Mac OS";
+        else if(/linux/i.test(ua)) os = "Linux";
+        else if(/android/i.test(ua)) os = "Android";
+        else if(/iphone|ipad/i.test(ua)) os = "iOS";
+
+        document.getElementById("browser").textContent = browser;
+        document.getElementById("os").textContent = os;
+    }
+    getBrowserOS();
+
+    // Ziyaret sayısı
+    function visitCount() {
+        let visits = localStorage.getItem("visits");
+        visits = visits ? Number(visits) + 1 : 1;
+        localStorage.setItem("visits", visits);
+        document.getElementById("visits").textContent = visits;
+    }
+    visitCount();
+
+    // Sayfa kontrolü
+    function hideAllPages() {
+        document.getElementById("terminal").style.display = "none";
+        document.getElementById("scripts").style.display = "none";
+        document.getElementById("tools").style.display = "none";
+        document.getElementById("contact").style.display = "none";
+        document.getElementById("egitimler").style.display = "none"; 
+        document.getElementById("social-media-page").style.display = "none"; // Yeni sosyal medya sayfasını da gizle
+
+        // Tüm geri tuşlarını gizle ve animasyon başlangıç durumuna getir
+        if (backButtonScripts) {
+            backButtonScripts.style.display = "none";
+            backButtonScripts.style.opacity = "0";
+            backButtonScripts.style.transform = "translateX(-10px)";
+        }
+        if (backButtonTools) {
+            backButtonTools.style.display = "none";
+            backButtonTools.style.opacity = "0";
+            backButtonTools.style.transform = "translateX(-10px)";
+        }
+        if (backButtonContact) {
+            backButtonContact.style.display = "none";
+            backButtonContact.style.opacity = "0";
+            backButtonContact.style.transform = "translateX(-10px)";
+        }
+        if (backButtonEgitimler) { 
+            backButtonEgitimler.style.display = "none";
+            backButtonEgitimler.style.opacity = "0";
+            backButtonEgitimler.style.transform = "translateX(-10px)";
+        }
+        if (backButtonSocialMedia) { // Yeni sosyal medya geri tuşu
+            backButtonSocialMedia.style.display = "none";
+            backButtonSocialMedia.style.opacity = "0";
+            backButtonSocialMedia.style.transform = "translateX(-10px)";
+        }
+    }
+
+    function showTerminal() {
+        hideAllPages();
+        document.getElementById("terminal").style.display = "flex";
+        // Ana terminalde geri tuşuna gerek yok, zaten hideAllPages gizledi
+    }
+
+    function goScripts() {
+        hideAllPages();
+        document.getElementById("scripts").style.display = "flex";
+        document.getElementById("scriptInput").value = "";
+        document.getElementById("scriptOutput").textContent = "";
+        if (backButtonScripts) {
+            backButtonScripts.style.display = "block";
+            backButtonScripts.style.opacity = "1";
+            backButtonScripts.style.transform = "translateX(0)";
+            backButtonScripts.style.animation = "slideInLeftFadeIn 0.3s ease-out forwards"; // Animasyonu uygula
+        }
+    }
+    
+    function goTools() {
+        hideAllPages();
+        document.getElementById("tools").style.display = "flex";
+        document.getElementById("tool-content").innerHTML = ""; 
+        if (backButtonTools) {
+            backButtonTools.style.display = "block";
+            backButtonTools.style.opacity = "1";
+            backButtonTools.style.transform = "translateX(0)";
+            backButtonTools.style.animation = "slideInLeftFadeIn 0.3s ease-out forwards"; // Animasyonu uygula
+        }
+    }
+    
+    function goContact() {
+        hideAllPages();
+        document.getElementById("contact").style.display = "flex";
+        document.getElementById("contactResult").textContent = "";
+        document.getElementById("contactForm").reset();
+        if (backButtonContact) {
+            backButtonContact.style.display = "block";
+            backButtonContact.style.opacity = "1";
+            backButtonContact.style.transform = "translateX(0)";
+            backButtonContact.style.animation = "slideInLeftFadeIn 0.3s ease-out forwards"; // Animasyonu uygula
+        }
+    }
+
+    function goEgitimler() { 
+        hideAllPages();
+        document.getElementById("egitimler").style.display = "flex";
+        
+        if (backButtonEgitimler) {
+            backButtonEgitimler.style.display = "block";
+            backButtonEgitimler.style.opacity = "1";
+            backButtonEgitimler.style.transform = "translateX(0)";
+            backButtonEgitimler.style.animation = "slideInLeftFadeIn 0.3s ease-out forwards"; // Animasyonu uygula
+        }
+    }
+
+    // YENİ FONKSİYON: Sosyal Medya Sayfasına Git
+    function goSocialMedia() {
+        hideAllPages();
+        document.getElementById("social-media-page").style.display = "flex";
+        if (backButtonSocialMedia) {
+            backButtonSocialMedia.style.display = "block";
+            backButtonSocialMedia.style.opacity = "1";
+            backButtonSocialMedia.style.transform = "translateX(0)";
+            backButtonSocialMedia.style.animation = "slideInLeftFadeIn 0.3s ease-out forwards"; // Animasyonu uygula
+        }
+    }
+    
+    function goBack() {
+        showTerminal();
+    }
+
+    // Komut İşleme
+    input.addEventListener("keydown", (e) => {
+        if(e.key === "Enter") {
+            const cmd = input.value.trim();
+            if(cmd === "") return;
+
+            // Komut geçmişine ekle
+            commandHistory.push(cmd);
+            historyIndex = -1; // Yeni komut girildiğinde geçmiş indeksini sıfırla
+            appendOutput("> " + cmd);
+
+            // Komutu işle
+            handleCommand(cmd.toLowerCase());
+            input.value = "";
+        }
+        // Geçmiş komutlar için ok tuşları
+        else if(e.key === "ArrowUp") {
+            e.preventDefault();
+            if(historyIndex < commandHistory.length - 1) {
+                historyIndex++;
+                input.value = commandHistory[commandHistory.length - 1 - historyIndex];
+            }
+        } else if(e.key === "ArrowDown") {
+            e.preventDefault();
+            if(historyIndex > 0) {
+                historyIndex--;
+                input.value = commandHistory[commandHistory.length - 1 - historyIndex];
+            } else {
+                historyIndex = -1;
+                input.value = "";
+            }
+        } else if(e.key === "Tab") {
+            e.preventDefault();
+            const val = input.value.trim();
+            if(val) {
+                const commands = ["help", "hack", "ctf", "post", "banner", "clear", "whoami", "social", "weather", "joke", "theme", "btc", "döviz", "şifre", "wifi", "track", "ping", "dns", "memory", "decode", "like", "comment", "egitimler"]; // Güncel komut listesi
+                const match = commands.find(cmd => cmd.startsWith(val));
+                if(match) {
+                    input.value = match;
+                }
+            }
+        }
+    });
+
+    async function handleCommand(cmd) { // async keyword eklendi
+        // Alias kontrolü
+        if(aliases[cmd]) {
+            cmd = aliases[cmd];
+            appendOutput(`ℹ️ Alias: ${cmd}`);
+        }
+        
+        // Önbellek kontrolü
+        if(commandCache[cmd]) {
+            return appendOutput(commandCache[cmd]);
+        }
+        
+        const args = cmd.split(" ");
+        
+        switch(args[0]) {
+            case "help":
+                const helpText = `
+🛠️ KOMUT LİSTESİ
+----------------------------------------
+GENEL KOMUTLAR:
+  • help           - Bu yardım menüsünü gösterir.
+  • clear          - Terminal ekranını temizler.
+  • banner         - Terminale havalı bir banner çizer.
+  • whoami         - Kullanıcı ve sistem bilgilerini gösterir.
+  • history        - Daha önce girilmiş komutları listeler.
+
+SİBER GÜVENLİK SİMÜLASYONLARI:
+  • hack [hedef]   - Hedefe yönelik sahte bir hack simülasyonu başlatır.
+  • ctf start      - Yakala Bayrağı (CTF) oyununu başlatır.
+  • decode [mesaj] - CTF ipuçlarını çözmek için kullanılır.
+  • wifi           - Wi-Fi şifre kırma simülasyonu başlatır.
+
+NETWORK ARAÇLARI (SİMÜLASYON):
+  • track [ip]     - Bir IP adresinin konumunu izler.
+  • ping [hedef]   - Belirtilen hedefe ping atar.
+  • dns [domain]   - Bir alan adının DNS bilgilerini sorgular.
+
+PRATİK ARAÇLAR:
+  • şifre [uzunluk] - Belirtilen uzunlukta güvenli bir şifre üretir.
+  • theme [ad]     - Terminal temasını değiştirir (matrix, cyberpunk, ocean).
+  • post [mesaj]   - Sahte bir Instagram gönderisi oluşturur.
+  • like           - Oluşturulan Instagram gönderisini beğenir.
+  • comment        - Oluşturulan Instagram gönderisine yorum ekler.
+  • memory         - Tarayıcının bellek kullanımını gösterir.
+
+BİLGİ VE EĞLENCE:
+  • weather        - Hava durumu bilgisini gösterir.
+  • joke           - Rastgele bir siber güvenlik şakası anlatır.
+  • btc            - Güncel Bitcoin fiyatını gösterir.
+  • döviz          - Güncel döviz kurlarını gösterir.
+
+MENÜLERE GİDİŞ:
+  • social         - Sosyal medya hesapları menüsünü açar.
+  • egitimler      - Siber güvenlik eğitim videoları menüsünü açar.
+  • scripts        - Script galerisi menüsünü açar.
+  • tools          - Hacking araçları menüsünü açar.
+  • contact        - İletişim formunu açar.
+----------------------------------------
+                `;
+                commandCache[cmd] = helpText;
+                appendOutput(helpText);
+                break;
+                
+            case "hack":
+                if(args[1]) {
+                    fakeHack(args[1]);
+                } else {
+                    appendOutput("❌ Kullanım: hack [hedef]");
+                }
+                break;
+                
+            case "ctf":
+                if(args[1] === "start") {
+                    startCTF();
+                } else {
+                    appendOutput("❌ Kullanım: ctf start");
+                }
+                break;
+                
+            case "post":
+                if(args[1]) {
+                    const message = cmd.substring(args[0].length + 1); // "post " kısmını atla
+                    postToInstagram(message);
+                } else {
+                    appendOutput("❌ Kullanım: post [mesaj]");
+                }
+                break;
+                
+            case "banner":
+                showBanner();
+                break;
+                
+            case "history":
+                if(commandHistory.length > 0) {
+                    appendOutput("📜 Komut Geçmişi:\n" + commandHistory.join("\n"));
+                } else {
+                    appendOutput("ℹ️ Henüz komut yazılmadı!");
+                }
+                break;
+                
+            case "clear":
+                output.innerHTML = "";
+                break;
+                
+            case "whoami":
+                const whoamiText = `
+👤 Kullanıcı Bilgileri:
+----------------------------------------
+• Kullanıcı: xnull
+• Rol: Ethical Hacker
+• Seviye: Uzman
+• Lokasyon: Gizli Sunucu
+----------------------------------------
+                `;
+                commandCache[cmd] = whoamiText;
+                appendOutput(whoamiText);
+                break;
+                
+            case "social":
+                // 'social' komutu artık doğrudan 'goSocialMedia' fonksiyonunu çağırıyor
+                goSocialMedia();
+                break;
+                
+            case "weather":
+                fetch('https://api.open-meteo.com/v1/forecast?latitude=41.01&longitude=28.98&current_weather=true') // İstanbul koordinatları
+                    .then(response => response.json())
+                    .then(data => {
+                        const weatherText = `🌤️ Hava Durumu: ${data.current_weather.temperature}°C | Rüzgar: ${data.current_weather.windspeed} km/h`;
+                        commandCache[cmd] = weatherText;
+                        appendOutput(weatherText);
+                    })
+                    .catch(() => {
+                        appendOutput("🌤️ Hava durumu bilgisi alınamadı. Simüle ediliyor: 24°C | Güneşli | Rüzgar: 10 km/h");
+                    });
+                break;
+                
+            case "joke":
+                const jokes = [
+                    "Neden bilgisayar soğuk algınlığı oldu? Çünkü Windows'u açık unutmuş!",
+                    "Bir bit byte'a demiş ki: Senin 8 katın var!",
+                    "Neden programcılar karanlıkta çalışır? Çünkü ışık bugs'a neden olur!"
+                ];
+                const joke = "😂 " + jokes[Math.floor(Math.random() * jokes.length)];
+                commandCache[cmd] = joke;
+                appendOutput(joke);
+                break;
+                
+            case "theme":
+                if(args[1] && ['matrix', 'cyberpunk', 'ocean'].includes(args[1])) {
+                    changeTheme(args[1]);
+                    const themeText = `🎨 Tema değiştirildi: ${args[1]}`;
+                    commandCache[cmd] = themeText;
+                    appendOutput(themeText);
+                } else {
+                    appendOutput("ℹ️ Mevcut temalar: matrix, cyberpunk, ocean");
+                }
+                break;
+                
+            case "btc":
+                fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
+                    .then(response => response.json())
+                    .then(data => {
+                        const btcText = `₿ Bitcoin: $${data.bitcoin.usd}`;
+                        commandCache[cmd] = btcText;
+                        appendOutput(btcText);
+                    })
+                    .catch(() => {
+                        appendOutput("₿ Bitcoin fiyatı alınamadı. Simüle ediliyor: $42,000");
+                    });
+                break;
+                
+            case "döviz":
+                fetch('https://api.exchangerate-api.com/v4/latest/USD')
+                    .then(response => response.json())
+                    .then(data => {
+                        const currencyText = `💵 1 USD = ${data.rates.TRY ? data.rates.TRY.toFixed(4) : 'N/A'} TRY\n💶 1 EUR = ${data.rates.EUR ? (data.rates.TRY/data.rates.EUR).toFixed(4) : 'N/A'} TRY`;
+                        commandCache[cmd] = currencyText;
+                        appendOutput(currencyText);
+                    })
+                    .catch(() => {
+                        appendOutput("💵 Döviz kurları alınamadı. Simüle ediliyor: 1 USD = 28.50 TRY | 1 EUR = 30.20 TRY");
+                    });
+                break;
+                
+            case "şifre":
+                const length = parseInt(args[1]) || 12; // ParseInt ekledim
+                if (isNaN(length) || length < 6 || length > 32) {
+                    appendOutput("❌ Geçersiz uzunluk. Şifre uzunluğu 6 ile 32 arasında olmalıdır.");
+                    break;
+                }
+                const charset = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%&";
+                let password = "";
+                for (let i = 0; i < length; i++) {
+                    password += charset.charAt(Math.floor(Math.random() * charset.length));
+                }
+                const passwordText = `🔐 Oluşturulan Şifre: ${password}`;
+                commandCache[cmd] = passwordText;
+                appendOutput(passwordText);
+                break;
+                
+            case "wifi":
+                appendOutput("📶 Wi-Fi ağları taranıyor...");
+                setTimeout(() => {
+                    appendOutput("🔍 Bulunan Ağlar:\n- Home_WiFi_5G\n- Starbucks_Free\n- XNull_Secure");
+                    setTimeout(() => {
+                        appendOutput("💣 Home_WiFi_5G şifresi kırılıyor...");
+                        // Progress bar animasyonu
+                        const progressBar = document.createElement("div");
+                        progressBar.className = "progress-bar";
+                        const progress = document.createElement("div");
+                        progress.className = "progress";
+                        progressBar.appendChild(progress);
+                        output.appendChild(progressBar);
+                        
+                        let width = 0;
+                        const interval = setInterval(() => {
+                            width += Math.random() * 5 + 1;
+                            if(width > 100) width = 100;
+                            progress.style.width = width + "%";
+                            
+                            if(width >= 100) {
+                                clearInterval(interval);
+                                setTimeout(() => {
+                                    output.removeChild(progressBar);
+                                    appendOutput("✅ Şifre kırıldı: '123456789' (Bu bir simülasyondur!)");
+                                }, 500);
+                            }
+                        }, 100);
+                    }, 1500);
+                }, 1000);
+                break;
+                
+            case "track":
+                if(!args[1]) {
+                    appendOutput("❌ Kullanım: track [IP]");
+                    break;
+                }
+                appendOutput(`🛰️ ${args[1]} izleniyor...`);
+                setTimeout(() => {
+                    const locations = ["İstanbul, Türkiye", "New York, ABD", "Tokyo, Japonya", "Berlin, Almanya"];
+                    const randomLoc = locations[Math.floor(Math.random()*locations.length)];
+                    appendOutput(`📍 Konum: ${randomLoc}\n🌐 ISP: ${["TurkTelekom", "Comcast", "NTT", "Deutsche Telekom"][Math.floor(Math.random()*4)]}`);
+                }, 2000);
+                break;
+                
+            case "ping":
+                if(!args[1]) {
+                    appendOutput("❌ Kullanım: ping [hedef]");
+                    break;
+                }
+                appendOutput(`🏓 ${args[1]} pingleniyor...`);
+                // Basit bir simülasyon
+                setTimeout(() => {
+                    const time1 = (Math.random() * 100 + 20).toFixed(2);
+                    const time2 = (Math.random() * 100 + 20).toFixed(2);
+                    const time3 = (Math.random() * 100 + 20).toFixed(2);
+                    appendOutput(`Ping yanıtı ${args[1]}: ${time1}ms`);
+                    appendOutput(`Ping yanıtı ${args[1]}: ${time2}ms`);
+                    appendOutput(`Ping yanıtı ${args[1]}: ${time3}ms`);
+                    appendOutput(`İstatistikler: Ortalama ${((parseFloat(time1) + parseFloat(time2) + parseFloat(time3))/3).toFixed(2)}ms`);
+                }, 1500);
+                break;
+                
+            case "dns":
+                if(!args[1]) {
+                    appendOutput("❌ Kullanım: dns [domain]");
+                    break;
+                }
+                appendOutput(`🌐 ${args[1]} için DNS sorgulanıyor...`);
+                setTimeout(() => {
+                    const ips = ["192.168.1.1", "8.8.8.8", "1.1.1.1"];
+                    const randomIp = ips[Math.floor(Math.random()*ips.length)];
+                    appendOutput(`Kayıt tipi A: ${randomIp}`);
+                    appendOutput(`Kayıt tipi MX: mail.${args[1]}`);
+                    appendOutput(`Kayıt tipi TXT: "v=spf1 include:_spf.google.com ~all"`);
+                }, 1500);
+                break;
+
+            case "memory":
+                if(performance.memory) {
+                    const used = Math.floor(performance.memory.usedJSHeapSize / 1048576);
+                    const total = Math.floor(performance.memory.jsHeapSizeLimit / 1048576);
+                    const percent = Math.round((used/total)*100);
+                    const graph = "▮".repeat(Math.round(percent/5)) + "▯".repeat(20-Math.round(percent/5));
+                    appendOutput(`🧠 Bellek Kullanımı: ${used}MB/${total}MB (${percent}%)\n${graph}`);
+                } else {
+                    appendOutput("ℹ️ Bellek bilgisi bu tarayıcıda mevcut değil");
+                }
+                break;
+                
+            case "sudo":
+                if(cmd.includes("make me a sandwich")) {
+                    appendOutput("https://xkcd.com/149/");
+                    appendOutput("(╯°□°）╯︵ ┻━┻");
+                } else {
+                    appendOutput("❌ Permission denied");
+                }
+                break;
+                
+            case "open":
+                if(cmd.includes("pod bay doors")) {
+                    appendOutput("I'm sorry Dave, I'm afraid I can't do that.");
+                }
+                break;
+            case "decode": // CTF için eklenen komut
+                if (ctfLevel === 1 && args[1] === "U2l6IGJ1IGhhY2tsZW5kaW4h") {
+                    const decoded = atob(args[1]);
+                    appendOutput(`🎉 Tebrikler! Çözülen mesaj: "${decoded}"`);
+                    appendOutput(`
+                    ----------------------------------------
+                    🔍 Seviye 2: Bir sonraki ipucunu bulmak için 'social' komutunu kullan.
+                    ----------------------------------------
+                    `);
+                    ctfLevel = 2;
+                } else if (ctfLevel === 1) {
+                    appendOutput("❌ Yanlış decode denemesi. İpucunu tekrar kontrol et.");
+                } else {
+                    appendOutput("ℹ️ CTF oyunu aktif değil veya bu komut şu an kullanılamaz.");
+                }
+                break;
+            case "like":
+                if(document.getElementById("fake-instagram-post").style.display === "block") {
+                    likePost();
+                    appendOutput("❤️ Postu beğendin!");
+                } else {
+                    appendOutput("ℹ️ Gönderi aktif değil. Önce bir 'post' komutu kullanın.");
+                }
+                break;
+            case "comment":
+                if(document.getElementById("fake-instagram-post").style.display === "block") {
+                    addComment();
+                } else {
+                    appendOutput("ℹ️ Gönderi aktif değil. Önce bir 'post' komutu kullanın.");
+                }
+                break;
+            case "egitimler": // Eğitimler komutu eklendi
+                goEgitimler();
+                break;
+            default:
+                appendOutput(`❌ Bilinmeyen komut: ${cmd}\nℹ️ Yardım için 'help' yazın.`);
+        }
+    }
+
+    // Terminale Yazı Ekle
+    function appendOutput(text) {
+        const lines = text.split('\n');
+        lines.forEach(line => {
+            const span = document.createElement('span');
+            span.style.display = 'inline-block';
+            span.style.animation = 'textReveal 0.1s forwards';
+            span.innerHTML = line;
+            output.appendChild(span);
+        });
+        output.appendChild(document.createTextNode('\n')); 
+        output.scrollTop = output.scrollHeight;
+    }
+
+    // Hack Simülasyonu
+    function fakeHack(target) {
+        appendOutput(`🔍 ${target} taranıyor...`);
+        
+        const progressBar = document.createElement("div");
+        progressBar.className = "progress-bar";
+        const progress = document.createElement("div");
+        progress.className = "progress";
+        progressBar.appendChild(progress);
+        output.appendChild(progressBar);
+        output.scrollTop = output.scrollHeight; 
+
+        let width = 0;
+        const interval = setInterval(() => {
+            width += Math.random() * 5 + 1;
+            if(width > 100) width = 100;
+            progress.style.width = width + "%";
+            
+            if(width >= 100) {
+                clearInterval(interval);
+                setTimeout(() => {
+                    output.removeChild(progressBar);
+                    appendOutput("✔️ 22/tcp (SSH) açık");
+                    appendOutput("✔️ 80/tcp (HTTP) açık");
+                    appendOutput("✔️ 443/tcp (HTTPS) açık");
+                    appendOutput("💣 Şifre kırılıyor...");
+                    
+                    setTimeout(() => {
+                        appendOutput(`💥 ${target} sistemine sızıldı!`);
+                        appendOutput(`💰 5.7 BTC ele geçirildi!`);
+                        appendOutput(`🚀 Erişim sağlandı! ${target} hacklendi! (Şaka şaka 😉)`);
+                    }, 1500);
+                }, 500);
+            }
+        }, 100);
+    }
+
+    // CTF Oyunu
+    function startCTF() {
+        ctfLevel = 1;
+        appendOutput(`
+🎮 CTF Oyunu Başladı!
+----------------------------------------
+🔍 Seviye 1: Bu mesajı decode et -> "U2l6IGJ1IGhhY2tsZW5kaW4h"
+💡 İpucu: 'decode [mesaj]' komutunu dene
+----------------------------------------
+        `);
+    }
+
+    // Instagram Post
+    function postToInstagram(message) {
+        document.getElementById("post-content").textContent = message;
+        document.getElementById("fake-instagram-post").style.display = "block";
+        document.getElementById("comments").innerHTML = "";
+        document.getElementById("like-count").textContent = "0";
+        document.getElementById("comment-count").textContent = "0";
+        likes = 0;
+        comments = 0;
+        appendOutput("📸 Instagram postu oluşturuldu! Deneme komutları: 'like', 'comment'");
+    }
+
+    // Like Butonu
+    function likePost() {
+        likes++;
+        document.getElementById("like-count").textContent = likes;
+        const heart = document.createElement("span");
+        heart.innerHTML = "❤️";
+        heart.style.position = "absolute";
+        const postDiv = document.getElementById("fake-instagram-post");
+        const rect = postDiv.getBoundingClientRect();
+        
+        heart.style.left = (Math.random() * rect.width) + "px";
+        heart.style.top = (Math.random() * rect.height * 0.5 + rect.height * 0.2) + "px"; 
+        heart.style.fontSize = (Math.random() * 20 + 10) + "px";
+        heart.style.animation = "floatUp 2s ease-out forwards";
+        postDiv.appendChild(heart); 
+        setTimeout(() => heart.remove(), 2000);
+    }
+
+    // Yorum Ekle
+    function addComment() {
+        comments++;
+        document.getElementById("comment-count").textContent = comments;
+        const commentText = prompt("Yorumunuz:");
+        if(commentText) {
+            const commentsDiv = document.getElementById("comments");
+            const comment = document.createElement("div");
+            comment.innerHTML = `<strong>anon${comments}:</strong> ${commentText}`;
+            comment.style.animation = "textReveal 0.3s forwards";
+            commentsDiv.appendChild(comment);
+        }
+    }
+
+    // Banner Göster
+    function showBanner() {
+        appendOutput(`
+███████╗███╗   ██╗██╗   ██╗██╗     ██╗
+╚══███╔╝████╗  ██║██║   ██║██║     ██║
+  ███╔╝ ██╔██╗ ██║██║   ██║██║     ██║
+ ███╔╝  ██║╚██╗██║██║   ██║██║     ██║
+███████╗██║ ╚████║╚██████╔╝███████╗██║
+╚══════╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝╚═╝
+Siber Güvenlik Terminali v3.0
+        `);
+    }
+
+    // Tema Değiştirme
+    function changeTheme(themeName) {
+        currentTheme = themeName;
+        const themes = {
+            "matrix": {
+                primary: "#00ff99",
+                secondary: "#00ccff",
+                accent: "#cc00ff",
+                bg1: "#011a13",
+                bg2: "#000a06",
+                chars: "日ﾊｯｱｸﾞｰﾋﾟｼｽﾄｳﾁﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍﾘｦﾛｮﾚﾙﾆ"
+            },
+            "cyberpunk": {
+                primary: "#ff00ff",
+                secondary: "#ffcc00",
+                accent: "#00ffff",
+                bg1: "#1a001a",
+                bg2: "#0a000a",
+                chars: "♠♥♦♣•◘○◙♂♀♪♫☼►◄↕‼¶§▬↨↑↓→←∟↔▲▼"
+            },
+            "ocean": {
+                primary: "#00ccff",
+                secondary: "#0066ff",
+                accent: "#00ffcc",
+                bg1: "#001a33",
+                bg2: "#000d1a",
+                chars: "ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
+            }
+        };
+        
+        const theme = themes[themeName];
+        document.documentElement.style.setProperty("--neon-primary", theme.primary);
+        document.documentElement.style.setProperty("--neon-secondary", theme.secondary);
+        document.documentElement.style.setProperty("--neon-accent", theme.accent);
+        document.documentElement.style.setProperty("--dark-1", theme.bg1);
+        document.documentElement.style.setProperty("--dark-2", theme.bg2);
+        
+        matrixChars = theme.chars; 
+    }
+
+    // Script sayfası fonksiyonları
+    function runScriptCommand(cmd) {
+        const out = document.getElementById("scriptOutput");
+        if(cmd === "demo1") {
+            out.textContent = "Demo Script 1 çalıştırıldı:\n" + 
+                "Merhaba Dünya!\n" +
+                "Sistem bilgileri:\n" +
+                `- Bellek: ${(performance.memory?.jsHeapSizeLimit/1024/1024)?.toFixed(2) || 'Bilinmiyor'} MB\n` +
+                `- Çekirdek: ${navigator.hardwareConcurrency || "Bilinmiyor"}\n` +
+                `- Ekran: ${window.screen.width}x${window.screen.height}`;
+        } else if(cmd === "demo2") {
+            out.textContent = "Demo Script 2 çalıştırıldı:\n" + 
+                "Rastgele sayı üretildi: " + Math.floor(Math.random()*100) + "\n" +
+                "SHA-256 Hash: " + sha256Sync(Math.random().toString()); 
+        } else if(cmd === "demo3") {
+            out.textContent = "Demo Script 3 çalıştırıldı:\n" + 
+                "Tarih: " + new Date().toLocaleDateString() + "\n" +
+                "Zaman: " + new Date().toLocaleTimeString() + "\n" +
+                "Zaman damgası: " + Date.now();
+        } else {
+            out.textContent = "❌ Bilinmeyen script komutu. Kullanılabilir: demo1, demo2, demo3";
+        }
+    }
+    
+    function scriptInputHandler(e) {
+        if(e.key === "Enter") {
+            runScriptCommand(e.target.value.trim());
+            e.target.value = "";
+        }
+    }
+
+    // Araçlar sayfası fonksiyonları
+    function runTool(tool) {
+        const toolContent = document.getElementById("tool-content");
+        
+        switch(tool) {
+            case "hash":
+                toolContent.innerHTML = `
+                    <label style="display: block; margin-top: 15px;">🔑 SHA-256 Hash Generator</label>
+                    <input id="hashInput" class="input-field" placeholder="Hash'lenecek metni girin..." autocomplete="off" spellcheck="false">
+                    <pre id="hashOutput" style="background: rgba(0, 30, 15, 0.6); padding: 15px; border-radius: 8px; margin-top: 10px;"></pre>
+                `;
+                setupHashTool();
+                break;
+                
+            case "scan":
+                toolContent.innerHTML = `
+                    <label style="display: block; margin-top: 15px;">🔍 Port Tarayıcı</label>
+                    <input id="scanInput" class="input-field" placeholder="IP adresi (örn: 192.168.1.1)" autocomplete="off" spellcheck="false">
+                    <button class="btn" onclick="startPortScan()" style="margin-top: 10px; width: 100%;">
+                        Taramayı Başlat
+                    </button>
+                    <pre id="scanOutput" style="background: rgba(0, 30, 15, 0.6); padding: 15px; border-radius: 8px; margin-top: 10px;"></pre>
+                `;
+                break;
+                
+            case "encoder":
+                toolContent.innerHTML = `
+                    <label style="display: block; margin-top: 15px;">🔣 Base64 Encoder/Decoder</label>
+                    <textarea id="encodeInput" class="input-field" placeholder="Metin girin..." rows="3" autocomplete="off" spellcheck="false"></textarea>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button class="btn" onclick="base64Encode()" style="flex: 1;">
+                            Encode
+                        </button>
+                        <button class="btn" onclick="base64Decode()" style="flex: 1;">
+                            Decode
+                        </button>
+                    </div>
+                    <pre id="encodeOutput" style="background: rgba(0, 30, 15, 0.6); padding: 15px; border-radius: 8px; margin-top: 10px;"></pre>
+                `;
+                break;
+                
+            case "password":
+                toolContent.innerHTML = `
+                    <label style="display: block; margin-top: 15px;">🔒 Şifre Üretici</label>
+                    <input id="passLength" type="number" value="12" min="6" max="32" class="input-field">
+                    <button class="btn" onclick="generatePassword()" style="margin-top: 10px; width: 100%;">
+                        Şifre Oluştur
+                    </button>
+                    <pre id="passwordOutput" style="background: rgba(0, 30, 15, 0.6); padding: 15px; border-radius: 8px; margin-top: 10px;"></pre>
+                `;
+                break;
+        }
+    }
+
+    function setupHashTool() {
+        const hashInput = document.getElementById("hashInput");
+        const hashOutput = document.getElementById("hashOutput");
+        
+        if (hashInput) { 
+            hashInput.addEventListener("input", async () => {
+                if(hashInput.value.trim() === "") {
+                    hashOutput.textContent = "";
+                    return;
+                }
+                const hash = await sha256(hashInput.value.trim());
+                if (hashOutput) hashOutput.textContent = hash; 
+            });
+        }
+    }
+
+    // SHA-256 Hash generator (Async versiyon)
+    async function sha256(str) {
+        const buf = new TextEncoder().encode(str);
+        const hashBuffer = await crypto.subtle.digest("SHA-256", buf);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    // SHA-256 Hash generator (Sync versiyon - demo2 için)
+    function sha256Sync(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash |= 0; 
+        }
+        return Math.abs(hash).toString(16).substring(0, 32).padStart(32, '0');
+    }
+
+    // Port Tarama (simülasyon)
+    function startPortScan() {
+        const ipInput = document.getElementById("scanInput");
+        const scanOutput = document.getElementById("scanOutput");
+        
+        const ip = ipInput ? ipInput.value.trim() : ""; 
+        
+        if(!ip) {
+            if (scanOutput) scanOutput.textContent = "❌ Lütfen geçerli bir IP adresi girin";
+            return;
+        }
+        
+        if (scanOutput) scanOutput.textContent = `🔍 ${ip} üzerinde port taraması başlatılıyor...\n`;
+        
+        const ports = [21, 22, 23, 25, 53, 80, 110, 143, 443, 3306, 3389];
+        const services = {
+            21: "FTP",
+            22: "SSH",
+            23: "Telnet",
+            25: "SMTP",
+            53: "DNS",
+            80: "HTTP",
+            110: "POP3",
+            143: "IMAP",
+            443: "HTTPS",
+            3306: "MySQL",
+            3389: "RDP"
+        };
+        
+        let openPorts = 0;
+        
+        ports.forEach((port, i) => {
+            setTimeout(() => {
+                const isOpen = Math.random() > 0.7;
+                if(isOpen) openPorts++;
+                
+                if (scanOutput) { 
+                    scanOutput.textContent += 
+                        `Port ${port} (${services[port] || 'Bilinmiyor'}): ` +
+                        (isOpen ? "✅ AÇIK" : "❌ KAPALI") + "\n";
+                }
+                
+                if(i === ports.length - 1) {
+                    if (scanOutput) scanOutput.textContent += `\nTarama tamamlandı! ${openPorts} açık port bulundu.\n`;
+                }
+            }, i * 300);
+        });
+    }
+
+    // Base64 Encode/Decode
+    function base64Encode() {
+        const inputElement = document.getElementById("encodeInput");
+        const outputElement = document.getElementById("encodeOutput");
+        if (inputElement && outputElement) {
+            const input = inputElement.value.trim();
+            outputElement.textContent = btoa(input);
+        }
+    }
+
+    function base64Decode() {
+        const inputElement = document.getElementById("encodeInput");
+        const outputElement = document.getElementById("encodeOutput");
+        if (inputElement && outputElement) {
+            const input = inputElement.value.trim();
+            try {
+                outputElement.textContent = atob(input);
+            } catch (e) {
+                outputElement.textContent = "❌ Geçersiz Base64 formatı!";
+            }
+        }
+    }
+
+    // Şifre Üretici
+    function generatePassword() {
+        const passLengthInput = document.getElementById("passLength");
+        const passwordOutput = document.getElementById("passwordOutput");
+        
+        if (passLengthInput && passwordOutput) {
+            const length = parseInt(passLengthInput.value) || 12;
+            if (isNaN(length) || length < 6 || length > 32) {
+                passwordOutput.textContent = "❌ Geçersiz uzunluk. Şifre uzunluğu 6 ile 32 arasında olmalıdır.";
+                return;
+            }
+            const charset = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%&";
+            let password = "";
+            for (let i = 0; i < length; i++) {
+                password += charset.charAt(Math.floor(Math.random() * charset.length));
+            }
+            passwordOutput.textContent = `🔐 Oluşturulan Şifre: ${password}`;
+        }
+    }
+
+    // İletişim formu gönderimi (demo)
+    function sendMessage(e) {
+        e.preventDefault();
+        const nameInput = document.getElementById("name");
+        const emailInput = document.getElementById("email");
+        const messageInput = document.getElementById("message");
+        const result = document.getElementById("contactResult");
+
+        const name = nameInput ? nameInput.value.trim() : "";
+        const email = emailInput ? emailInput.value.trim() : "";
+        const message = messageInput ? messageInput.value.trim() : "";
+
+        if(!name || !email || !message) {
+            if (result) {
+                result.textContent = "❌ Lütfen tüm alanları doldurun.";
+                result.style.color = "#ff4444";
+            }
+            return;
+        }
+        
+        if(!email.includes("@") || !email.includes(".")) {
+            if (result) {
+                result.textContent = "❌ Geçersiz email adresi!";
+                result.style.color = "#ff4444";
+            }
+            return;
+        }
+        
+        if (result) {
+            result.textContent = "⏳ Mesajınız gönderiliyor...";
+            result.style.color = "#00ccff";
+        }
+        
+        setTimeout(() => {
+            if (result) {
+                result.textContent = "✅ Mesajınız gönderildi! En kısa sürede dönüş yapacağız.";
+                result.style.color = "#00ff99";
+            }
+            const contactForm = document.getElementById("contactForm");
+            if (contactForm) contactForm.reset();
+            
+            appendOutput(`📬 İletişim formu gönderildi: ${name} (${email})`);
+        }, 2000);
+    }
+
+    // Sosyal Medya Hesapları Fonksiyonu (Artık yeni sayfaya yönlendiriyor)
+    function showSocialMediaAccounts() {
+        goSocialMedia(); // Yeni sosyal medya sayfasına git
+    }
+
+    // Pencere Kontrolleri
+    function closeTerminal() {
+        const terminal = document.getElementById('terminal');
+        if (terminal) {
+            terminal.style.transform = 'scale(0.8)';
+            terminal.style.opacity = '0';
+            setTimeout(() => {
+                alert('Terminal kapatılıyor...');
+            }, 300);
+        }
+    }
+
+    function minimizeTerminal() {
+        const term = document.getElementById('terminal');
+        if (term) {
+            term.style.transform = 'translate(-50%, 80vh)';
+            term.style.opacity = '0.5';
+            setTimeout(() => {
+                term.style.width = '300px';
+                term.style.height = '40px';
+                term.style.overflow = 'hidden';
+            }, 300);
+        }
+    }
+
+    function maximizeTerminal() {
+        const term = document.getElementById('terminal');
+        if (term) {
+            term.style.transform = 'translate(-50%, -50%) scale(1)';
+            term.style.opacity = '1';
+            term.style.width = '90%';
+            term.style.height = '80vh';
+            term.style.overflow = '';
+        }
+    }
+
+    // 3D Efektleri Başlatma (Animasyonları kaldırıldı)
+    function init3DEffects() {
+        const terminal = document.getElementById('terminal');
+        if (!terminal) return; 
+
+        // Terminalin başlangıç transformu (ortalanmış ve döndürülmemiş)
+        terminal.style.transform = 'translate(-50%, -50%) rotateY(0deg) rotateX(0deg)';
+        terminal.style.transition = 'transform 0.3s ease'; // Diğer transformlar için transition kalsın
+    }
+
+    // Tema Değiştirme Butonu
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) { 
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('light');
+            document.body.classList.toggle('dark');
+            
+            if(document.body.classList.contains('light')) {
+                changeTheme('ocean');
+            } else {
+                changeTheme('matrix');
+            }
+        });
+    }
+
+    // Welcome Popup Functions
+    const welcomeOverlay = document.getElementById('welcome-overlay');
+    function showWelcomePopup() {
+        if (welcomeOverlay) {
+            welcomeOverlay.classList.add('visible');
+        }
+    }
+
+    function closeWelcomePopup() {
+        if (welcomeOverlay) {
+            welcomeOverlay.classList.remove('visible');
+        }
+        // Popup kapandıktan sonra terminali göster
+        showTerminal();
+    }
+
+
+    // Uygulama Başlatma
+    window.addEventListener('DOMContentLoaded', () => {
+        initMatrixEffect();
+        init3DEffects();
+        updateDateTime();
+        getIP();
+        getBrowserOS();
+        visitCount();
+        
+        // Önce hoş geldin popup'ını göster
+        showWelcomePopup();
+
+        // Popup kapatıldıktan sonra veya 5 saniye sonra terminali başlat
+        setTimeout(() => {
+            // Eğer popup hala açıksa otomatik kapat
+            if (welcomeOverlay && welcomeOverlay.classList.contains('visible')) {
+                closeWelcomePopup();
+            }
+            // Başlangıç mesajlarını appendOutput ile gönder
+            appendOutput("🛠️ Komut listesi için 'help' yazın");
+        }, 5000); // 5 saniye sonra otomatik kapanacak, sonra terminal mesajları gelecek
+    });
+</script>
+</body>
+</html>
