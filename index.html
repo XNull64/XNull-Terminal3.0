@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>XNull Terminal v3.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js"></script>
     <style>
         :root {
             --neon-primary: #00ff99;
@@ -27,9 +28,9 @@
             background-color: var(--dark-2);
             color: var(--neon-primary);
             overflow-x: hidden;
-            min-height: 100vh; /* Tam ekran yüksekliği */
+            min-height: 100vh;
             line-height: 1.6;
-            display: flex; /* Terminali ortalamak için */
+            display: flex;
             justify-content: center;
             align-items: center;
         }
@@ -39,7 +40,6 @@
             color: #065f46;
         }
 
-        /* Yeni Pencere Kontrolleri */
         .window-controls {
             display: flex;
             gap: 8px;
@@ -54,49 +54,45 @@
             height: 12px;
             border-radius: 50%;
             cursor: pointer;
-            position: relative; /* Ok ikonu için */
-            transition: all 0.2s ease; /* Genel geçişler için */
+            position: relative;
+            transition: all 0.2s ease;
         }
 
         .close-btn { background-color: #ff5f56; }
         .minimize-btn { background-color: #ffbd2e; }
         .maximize-btn { background-color: #27c93f; }
 
-        /* Yeni Geri Tuşu Stili */
         .back-btn {
-            background-color: var(--neon-secondary); /* Tema rengine uygun */
-            display: none; /* Başlangıçta gizli */
-            opacity: 0; /* Animasyon başlangıcı için */
-            transform: translateX(-10px); /* Animasyon başlangıcı için */
-            width: 24px; /* Buton boyutunu büyüttük */
-            height: 24px; /* Buton boyutunu büyüttük */
-            border-radius: 50%; /* Yuvarlak kalması için */
-            border: 2px solid var(--neon-primary); /* Kenarlık ekledik */
-            box-shadow: 0 0 8px rgba(0, 204, 255, 0.6); /* Gölge ekledik */
-            transition: all 0.3s ease; /* Boyut ve renk geçişleri için */
+            background-color: var(--neon-secondary);
+            display: none;
+            opacity: 0;
+            transform: translateX(-10px);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid var(--neon-primary);
+            box-shadow: 0 0 8px rgba(0, 204, 255, 0.6);
+            transition: all 0.3s ease;
         }
         .back-btn::before {
-            content: '←'; /* Geri ok ikonu */
-            color: var(--dark-2); /* Ok rengini daha kontrastlı yaptık */
-            font-size: 16px; /* Oku büyüttük */
+            content: '←';
+            color: var(--dark-2);
+            font-size: 16px;
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             font-weight: bold;
         }
-        /* Geri Tuşu Hover Efekti */
         .back-btn:hover {
             transform: translateX(0) scale(1.1);
             box-shadow: 0 0 15px rgba(0, 204, 255, 0.9);
-            background-color: var(--neon-accent); /* Hover'da farklı renk */
+            background-color: var(--neon-accent);
         }
         .back-btn:hover::before {
-            color: var(--light-1); /* Hover'da okun rengi */
+            color: var(--light-1);
         }
 
-
-        /* Geri Tuşu Animasyonu */
         @keyframes slideInLeftFadeIn {
             from {
                 opacity: 0;
@@ -108,9 +104,8 @@
             }
         }
 
-        /* Terminal Konteyneri */
         #terminal {
-            position: fixed; /* Fixed yerine absolute de kullanılabilir ama popup'ı örtmesin diye fixed daha iyi */
+            position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
@@ -130,7 +125,6 @@
             z-index: 100;
         }
 
-        /* Hidden Pages */
         .hidden-page {
             position: fixed;
             top: 50%;
@@ -145,15 +139,13 @@
             box-shadow: 0 0 30px rgba(0, 255, 153, 0.3),
                         0 0 60px rgba(0, 255, 153, 0.1) inset;
             backdrop-filter: blur(8px);
-            display: none; /* Varsayılan olarak gizli */
+            display: none;
             flex-direction: column;
             overflow: hidden;
             transition: all 0.3s ease;
-            z-index: 90; /* Terminalden daha az z-index */
+            z-index: 90;
         }
 
-
-        /* Terminal Başlık Çubuğu */
         .terminal-header {
             display: flex;
             justify-content: space-between;
@@ -166,7 +158,7 @@
         .terminal-title {
             display: flex;
             align-items: center;
-            gap: 8px; /* İkon, tuş ve metin arasına boşluk */
+            gap: 8px;
         }
 
         .terminal-icon {
@@ -195,15 +187,13 @@
             50% { opacity: 0.5; }
         }
 
-        /* Terminal İçeriği */
         .terminal-content {
             flex: 1;
             padding: 20px;
             overflow-y: auto;
-            color: var(--neon-primary); /* İçerik rengini tema ile uyumlu hale getir */
+            color: var(--neon-primary);
         }
 
-        /* Buton Grupları */
         .btn-group {
             display: flex;
             gap: 15px;
@@ -233,7 +223,6 @@
             box-shadow: 0 5px 15px rgba(0, 255, 153, 0.4);
         }
 
-        /* Giriş Alanları */
         .input-field {
             width: 100%;
             padding: 12px 15px;
@@ -252,8 +241,7 @@
             box-shadow: 0 0 10px rgba(0, 204, 255, 0.5);
         }
 
-        /* Çıktı Alanı */
-        #output, #scriptOutput, #hashOutput, #scanOutput, #encodeOutput, #passwordOutput, #egitimOutput, #socialMediaOutput { /* Yeni çıktı alanı eklendi */
+        #output, #scriptOutput, #hashOutput, #scanOutput, #encodeOutput, #passwordOutput, #egitimOutput, #socialMediaOutput {
             background: rgba(0, 30, 15, 0.6);
             padding: 15px;
             border-radius: 8px;
@@ -263,12 +251,11 @@
             overflow-y: auto;
             font-size: 15px;
             line-height: 1.5;
-            color: var(--neon-primary); /* Çıktı rengini tema ile uyumlu hale getir */
-            white-space: pre-wrap; /* Pre elementleri için kelime kaydırma */
-            word-wrap: break-word; /* Uzun kelimeleri kırma */
+            color: var(--neon-primary);
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
 
-        /* Matrix Arka Plan */
         .matrix-bg {
             position: fixed;
             top: 0;
@@ -279,7 +266,6 @@
             opacity: 0.3;
         }
 
-        /* Responsive Düzen */
         @media (max-width: 768px) {
             #terminal, .hidden-page {
                 width: 95%;
@@ -297,15 +283,12 @@
             }
         }
 
-        /* 3D Efekt */
         .terminal-3d {
             transform-style: preserve-3d;
             perspective: 1000px;
-            /* Transition buraya eklendi, böylece fare hareketi olmasa bile diğer transformlar yumuşak olur */
-            transition: transform 0.3s ease; 
+            transition: transform 0.3s ease;
         }
 
-        /* Tema Butonu */
         #themeToggle {
             position: fixed;
             top: 20px;
@@ -338,7 +321,6 @@
             fill: #002211;
         }
 
-        /* Progress Bar */
         .progress-bar {
             width: 100%;
             height: 10px;
@@ -355,30 +337,27 @@
             transition: width 0.1s linear;
         }
 
-        /* Text Reveal Animation */
         @keyframes textReveal {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Floating Heart Animation for Instagram Post */
         @keyframes floatUp {
             from { opacity: 1; transform: translateY(0); }
             to { opacity: 0; transform: translateY(-50px); }
         }
 
-        /* Welcome Popup Styles */
         #welcome-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.9); /* Yarı şeffaf arka plan */
+            background: rgba(0, 0, 0, 0.9);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 10001; /* Diğer her şeyin üstünde */
+            z-index: 10001;
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.5s ease;
@@ -439,7 +418,6 @@
             transform: translateY(-2px);
         }
 
-        /* Eğitimler Sayfası Stilleri */
         .video-item {
             background: rgba(0, 255, 153, 0.05);
             padding: 15px;
@@ -471,7 +449,7 @@
         .video-embed {
             position: relative;
             width: 100%;
-            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            padding-bottom: 56.25%;
             height: 0;
             overflow: hidden;
             border-radius: 5px;
@@ -556,7 +534,7 @@
             </button>
             <button class="btn" onclick="goSocialMedia()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M7.8 2c-2.071 0-2.339.006-3.15.045-.81.04-.984.148-1.348.29-.36.143-.68.324-.982.628-.303.303-.485.62-.628.982-.143.364-.25.538-.29.1348C2.006 4.661 2 4.93 2 7v8c0 2.071.006 2.339.045 3.15.04.81.148.984.29 1.348.143.36.324.68.628.982.303.303.62.485.982.628.364.143.538.25.1348.29.81.039 1.079.045 3.15.045h8c2.071 0 2.339-.006 3.15-.045.81-.04.984-.148 1.348-.29.36-.143.68-.324.982-.628.303.303.62.485.982.628.364.143.538.25.1348.29-.81.039-1.079-.045-3.15-.045zm0 2h8c1.972 0 2.222.005 3.012.044.78.038.835.11.97.165.25.103.475.215.687.427.21.21.322.437.425.687.055.135.127.19.165.97.039.79.044 1.04.044 3.012v8c0 1.972-.005 2.222-.044 3.012-.038.78-.11.835-.165.97-.103.25-.215.475-.427.687-.21.21-.437.322-.687.425-.135.055-.19.127-.97.165-.79.039-1.04.044-3.012.044h-8c-1.972 0-2.222-.005-3.012-.044-.78-.038-.835-.11-.97-.165-.25-.103-.475-.215-.687-.427-.21-.21-.437-.322-.425-.687.055-.135.127-.19.165-.97-.039-.79-.044-1.04-.044-3.012v-8c0-1.972.005-2.222.044-3.012.038-.78.11-.835.165-.97.103.25.215.475.427-.687.21.21.437.322.425-.687.055-.135.127-.19.165-.97.039-.79.044-1.04.044-3.012zm5.2 2.8a4.2 4.2 0 1 0 0 8.4 4.2 4.2 0 0 0 0-8.4zm0 2a2.2 2.2 0 1 1 0 4.4 2.2 2.2 0 0 1 0-4.4zM17.4 5.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+                    <path d="M7.8 2c-2.071 0-2.339.006-3.15.045-.81.04-.984.148-1.348.29-.36.143-.68.324-.982.628-.303.303-.485.62-.628.982-.143.364-.25.538-.29.1348C2.006 4.661 2 4.93 2 7v8c0 2.071.006 2.339.045 3.15.04.81.148.984.29 1.348.143.36.324.68.628.982.303.303.62.485.982.628.364.143.538.25.1348.29.81.039 1.079.045 3.15.045h8c2.071 0 2.339-.006 3.15-.045.81-.04.984-.148 1.348-.29.36-.143.68-.324.982-.628.303.303.62.485.982.628.364.143.538.25.1348.29-.81.039-1.079-.045-3.15-.045zm0 2h8c1.972 0 2.222.005 3.012.044.78.038.835.11.97.165.25.103.475.215.687.427.21.21.437.322.425.687.055.135.127.19.165.97-.039.79-.044 1.04-.044 3.012v8c0 1.972-.005 2.222-.044 3.012-.038.78-.11.835-.165.97-.103.25-.215.475-.427.687-.21.21-.437.322-.425-.687.055-.135.127-.19.165-.97.039-.79.044-1.04.044-3.012zm5.2 2.8a4.2 4.2 0 1 0 0 8.4 4.2 4.2 0 0 0 0-8.4zm0 2a2.2 2.2 0 1 1 0 4.4 2.2 2.2 0 0 1 0-4.4zM17.4 5.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
                 </svg>
                 Sosyal Medya
             </button>
@@ -738,17 +716,17 @@
             <div class="video-item">
                 <h3>GitHub</h3>
                 <p>Açık kaynak projelerimizi ve kodlarımızı buradan inceleyebilirsiniz.</p>
-                <a href="https://github.com/xnullsec" target="_blank">xnullsec GitHub Profili</a>
+                <a href="https://github.com/xnullsec" target="_blank">xnullsec GitHub Profili yakında eklenecek</a>
             </div>
             <div class="video-item">
                 <h3>Twitter (X)</h3>
                 <p>Hızlı güncellemeler ve kısa paylaşımlar için bizi takip edin.</p>
-                <a href="https://twitter.com/xnullsec" target="_blank">@xnullsec Twitter Hesabı</a>
+                <a href="https://twitter.com/xnullsec" target="_blank">@xnullsec Twitter Hesabı Yakında Gelecek</a>
             </div>
             <div class="video-item">
                 <h3>LinkedIn</h3>
                 <p>Profesyonel ağımızı genişletmek ve işbirlikleri için bize ulaşın.</p>
-                <a href="https://linkedin.com/in/xnullsec" target="_blank">xnullsec LinkedIn Profili</a>
+                <a href="https://linkedin.com/in/xnullsec" target="_blank">xnullsec LinkedIn Profili Yakında Gelecek</a>
             </div>
         </div>
         <p style="margin-top: 30px; text-align: center; color: var(--neon-accent);">
@@ -757,27 +735,31 @@
     </div>
 </div>
 
-
 <script>
+    // EmailJS başlatma
+    (function(){
+        emailjs.init("vk6jcyfj8c1dDKnUU"); // EmailJS kullanıcı ID'nizi buraya girin
+    })();
+
     // ========== GLOBAL DEĞİŞKENLER ==========
     let commandHistory = [];
     let historyIndex = -1;
     let ctfLevel = 0;
     let likes = 0;
     let comments = 0;
-    let currentTheme = 'matrix'; // Başlangıç temasını belirle
+    let currentTheme = 'matrix';
     const commandCache = {};
     const aliases = {
         "ll": "ls -la",
         "..": "cd ..",
         "list": "ls"
     };
-    let matrixChars = "日ﾊｯｱｸﾞｰﾋﾟｼｽﾄｳﾁﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍﾘｦﾛｮﾚﾙﾆ"; // Matrix karakter seti
+    let matrixChars = "日ﾊｯｱｸﾞｰﾋﾟｼｽﾄｳﾁﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍﾘｦﾛｮﾚﾙﾆ";
 
     // ========== MATRIX EFEKTI ==========
     function initMatrixEffect() {
         const canvas = document.getElementById('matrixCanvas');
-        if (!canvas) { // Canvas elementi bulunamazsa uyarı ver
+        if (!canvas) {
             console.warn("Matrix Canvas elementi bulunamadı. Matrix efekti başlatılamıyor.");
             return;
         }
@@ -800,8 +782,8 @@
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             for (let i = 0; i < drops.length; i++) {
-                const text = matrixChars[Math.floor(Math.random() * matrixChars.length)]; // matrixChars kullan
-                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--neon-primary'); // Tema rengini kullan
+                const text = matrixChars[Math.floor(Math.random() * matrixChars.length)];
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--neon-primary');
                 ctx.font = `${fontSize}px 'Fira Code', monospace`;
                 ctx.fillText(text, i * fontSize, drops[i] * fontSize);
                 
@@ -818,12 +800,11 @@
     // ========== TERMINAL FONKSIYONLARI ==========
     const output = document.getElementById("output");
     const input = document.getElementById("commandInput");
-    // Her sayfa için geri tuşlarını ayrı ayrı al
     const backButtonScripts = document.getElementById("backBtnScripts");
     const backButtonTools = document.getElementById("backBtnTools");
     const backButtonContact = document.getElementById("backBtnContact");
     const backButtonEgitimler = document.getElementById("backBtnEgitimler"); 
-    const backButtonSocialMedia = document.getElementById("backBtnSocialMedia"); // Yeni Sosyal Medya geri tuşu
+    const backButtonSocialMedia = document.getElementById("backBtnSocialMedia");
 
     // Tarih & Saat
     function updateDateTime() {
@@ -895,9 +876,8 @@
         document.getElementById("tools").style.display = "none";
         document.getElementById("contact").style.display = "none";
         document.getElementById("egitimler").style.display = "none"; 
-        document.getElementById("social-media-page").style.display = "none"; // Yeni sosyal medya sayfasını da gizle
+        document.getElementById("social-media-page").style.display = "none";
 
-        // Tüm geri tuşlarını gizle ve animasyon başlangıç durumuna getir
         if (backButtonScripts) {
             backButtonScripts.style.display = "none";
             backButtonScripts.style.opacity = "0";
@@ -918,7 +898,7 @@
             backButtonEgitimler.style.opacity = "0";
             backButtonEgitimler.style.transform = "translateX(-10px)";
         }
-        if (backButtonSocialMedia) { // Yeni sosyal medya geri tuşu
+        if (backButtonSocialMedia) {
             backButtonSocialMedia.style.display = "none";
             backButtonSocialMedia.style.opacity = "0";
             backButtonSocialMedia.style.transform = "translateX(-10px)";
@@ -928,7 +908,6 @@
     function showTerminal() {
         hideAllPages();
         document.getElementById("terminal").style.display = "flex";
-        // Ana terminalde geri tuşuna gerek yok, zaten hideAllPages gizledi
     }
 
     function goScripts() {
@@ -940,7 +919,7 @@
             backButtonScripts.style.display = "block";
             backButtonScripts.style.opacity = "1";
             backButtonScripts.style.transform = "translateX(0)";
-            backButtonScripts.style.animation = "slideInLeftFadeIn 0.3s ease-out forwards"; // Animasyonu uygula
+            backButtonScripts.style.animation = "slideInLeftFadeIn 0.3s ease-out forwards";
         }
     }
     
@@ -952,7 +931,7 @@
             backButtonTools.style.display = "block";
             backButtonTools.style.opacity = "1";
             backButtonTools.style.transform = "translateX(0)";
-            backButtonTools.style.animation = "slideInLeftFadeIn 0.3s ease-out forwards"; // Animasyonu uygula
+            backButtonTools.style.animation = "slideInLeftFadeIn 0.3s ease-out forwards";
         }
     }
     
@@ -965,7 +944,7 @@
             backButtonContact.style.display = "block";
             backButtonContact.style.opacity = "1";
             backButtonContact.style.transform = "translateX(0)";
-            backButtonContact.style.animation = "slideInLeftFadeIn 0.3s ease-out forwards"; // Animasyonu uygula
+            backButtonContact.style.animation = "slideInLeftFadeIn 0.3s ease-out forwards";
         }
     }
 
@@ -977,11 +956,10 @@
             backButtonEgitimler.style.display = "block";
             backButtonEgitimler.style.opacity = "1";
             backButtonEgitimler.style.transform = "translateX(0)";
-            backButtonEgitimler.style.animation = "slideInLeftFadeIn 0.3s ease-out forwards"; // Animasyonu uygula
+            backButtonEgitimler.style.animation = "slideInLeftFadeIn 0.3s ease-out forwards";
         }
     }
 
-    // YENİ FONKSİYON: Sosyal Medya Sayfasına Git
     function goSocialMedia() {
         hideAllPages();
         document.getElementById("social-media-page").style.display = "flex";
@@ -989,7 +967,7 @@
             backButtonSocialMedia.style.display = "block";
             backButtonSocialMedia.style.opacity = "1";
             backButtonSocialMedia.style.transform = "translateX(0)";
-            backButtonSocialMedia.style.animation = "slideInLeftFadeIn 0.3s ease-out forwards"; // Animasyonu uygula
+            backButtonSocialMedia.style.animation = "slideInLeftFadeIn 0.3s ease-out forwards";
         }
     }
     
@@ -1003,16 +981,13 @@
             const cmd = input.value.trim();
             if(cmd === "") return;
 
-            // Komut geçmişine ekle
             commandHistory.push(cmd);
-            historyIndex = -1; // Yeni komut girildiğinde geçmiş indeksini sıfırla
+            historyIndex = -1;
             appendOutput("> " + cmd);
 
-            // Komutu işle
             handleCommand(cmd.toLowerCase());
             input.value = "";
         }
-        // Geçmiş komutlar için ok tuşları
         else if(e.key === "ArrowUp") {
             e.preventDefault();
             if(historyIndex < commandHistory.length - 1) {
@@ -1032,7 +1007,7 @@
             e.preventDefault();
             const val = input.value.trim();
             if(val) {
-                const commands = ["help", "hack", "ctf", "post", "banner", "clear", "whoami", "social", "weather", "joke", "theme", "btc", "döviz", "şifre", "wifi", "track", "ping", "dns", "memory", "decode", "like", "comment", "egitimler"]; // Güncel komut listesi
+                const commands = ["help", "hack", "ctf", "post", "banner", "clear", "whoami", "social", "weather", "joke", "theme", "btc", "döviz", "şifre", "wifi", "track", "ping", "dns", "memory", "decode", "like", "comment", "egitimler"];
                 const match = commands.find(cmd => cmd.startsWith(val));
                 if(match) {
                     input.value = match;
@@ -1041,14 +1016,12 @@
         }
     });
 
-    async function handleCommand(cmd) { // async keyword eklendi
-        // Alias kontrolü
+    async function handleCommand(cmd) {
         if(aliases[cmd]) {
             cmd = aliases[cmd];
             appendOutput(`ℹ️ Alias: ${cmd}`);
         }
         
-        // Önbellek kontrolü
         if(commandCache[cmd]) {
             return appendOutput(commandCache[cmd]);
         }
@@ -1122,7 +1095,7 @@ MENÜLERE GİDİŞ:
                 
             case "post":
                 if(args[1]) {
-                    const message = cmd.substring(args[0].length + 1); // "post " kısmını atla
+                    const message = cmd.substring(args[0].length + 1);
                     postToInstagram(message);
                 } else {
                     appendOutput("❌ Kullanım: post [mesaj]");
@@ -1160,12 +1133,11 @@ MENÜLERE GİDİŞ:
                 break;
                 
             case "social":
-                // 'social' komutu artık doğrudan 'goSocialMedia' fonksiyonunu çağırıyor
                 goSocialMedia();
                 break;
                 
             case "weather":
-                fetch('https://api.open-meteo.com/v1/forecast?latitude=41.01&longitude=28.98&current_weather=true') // İstanbul koordinatları
+                fetch('https://api.open-meteo.com/v1/forecast?latitude=41.01&longitude=28.98&current_weather=true')
                     .then(response => response.json())
                     .then(data => {
                         const weatherText = `🌤️ Hava Durumu: ${data.current_weather.temperature}°C | Rüzgar: ${data.current_weather.windspeed} km/h`;
@@ -1226,7 +1198,7 @@ MENÜLERE GİDİŞ:
                 break;
                 
             case "şifre":
-                const length = parseInt(args[1]) || 12; // ParseInt ekledim
+                const length = parseInt(args[1]) || 12;
                 if (isNaN(length) || length < 6 || length > 32) {
                     appendOutput("❌ Geçersiz uzunluk. Şifre uzunluğu 6 ile 32 arasında olmalıdır.");
                     break;
@@ -1247,7 +1219,6 @@ MENÜLERE GİDİŞ:
                     appendOutput("🔍 Bulunan Ağlar:\n- Home_WiFi_5G\n- Starbucks_Free\n- XNull_Secure");
                     setTimeout(() => {
                         appendOutput("💣 Home_WiFi_5G şifresi kırılıyor...");
-                        // Progress bar animasyonu
                         const progressBar = document.createElement("div");
                         progressBar.className = "progress-bar";
                         const progress = document.createElement("div");
@@ -1292,7 +1263,6 @@ MENÜLERE GİDİŞ:
                     break;
                 }
                 appendOutput(`🏓 ${args[1]} pingleniyor...`);
-                // Basit bir simülasyon
                 setTimeout(() => {
                     const time1 = (Math.random() * 100 + 20).toFixed(2);
                     const time2 = (Math.random() * 100 + 20).toFixed(2);
@@ -1345,7 +1315,7 @@ MENÜLERE GİDİŞ:
                     appendOutput("I'm sorry Dave, I'm afraid I can't do that.");
                 }
                 break;
-            case "decode": // CTF için eklenen komut
+            case "decode":
                 if (ctfLevel === 1 && args[1] === "U2l6IGJ1IGhhY2tsZW5kaW4h") {
                     const decoded = atob(args[1]);
                     appendOutput(`🎉 Tebrikler! Çözülen mesaj: "${decoded}"`);
@@ -1376,7 +1346,7 @@ MENÜLERE GİDİŞ:
                     appendOutput("ℹ️ Gönderi aktif değil. Önce bir 'post' komutu kullanın.");
                 }
                 break;
-            case "egitimler": // Eğitimler komutu eklendi
+            case "egitimler":
                 goEgitimler();
                 break;
             default:
@@ -1756,7 +1726,7 @@ Siber Güvenlik Terminali v3.0
         }
     }
 
-    // İletişim formu gönderimi (demo)
+    // İletişim formu gönderimi (EmailJS ile)
     function sendMessage(e) {
         e.preventDefault();
         const nameInput = document.getElementById("name");
@@ -1789,7 +1759,14 @@ Siber Güvenlik Terminali v3.0
             result.style.color = "#00ccff";
         }
         
-        setTimeout(() => {
+        // EmailJS ile e-posta gönder
+        emailjs.send("service_bjwm0qi", "template_29t3jzv", {
+            from_name: name,
+            from_email: email,
+            message: message,
+            to_email: "xnull64@gmail.com"
+        })
+        .then(function(response) {
             if (result) {
                 result.textContent = "✅ Mesajınız gönderildi! En kısa sürede dönüş yapacağız.";
                 result.style.color = "#00ff99";
@@ -1798,12 +1775,18 @@ Siber Güvenlik Terminali v3.0
             if (contactForm) contactForm.reset();
             
             appendOutput(`📬 İletişim formu gönderildi: ${name} (${email})`);
-        }, 2000);
+        }, function(error) {
+            if (result) {
+                result.textContent = "❌ Mesaj gönderilirken bir hata oluştu. Lütfen tekrar deneyin.";
+                result.style.color = "#ff4444";
+            }
+            console.error("EmailJS Hatası:", error);
+        });
     }
 
-    // Sosyal Medya Hesapları Fonksiyonu (Artık yeni sayfaya yönlendiriyor)
+    // Sosyal Medya Hesapları Fonksiyonu
     function showSocialMediaAccounts() {
-        goSocialMedia(); // Yeni sosyal medya sayfasına git
+        goSocialMedia();
     }
 
     // Pencere Kontrolleri
@@ -1842,14 +1825,13 @@ Siber Güvenlik Terminali v3.0
         }
     }
 
-    // 3D Efektleri Başlatma (Animasyonları kaldırıldı)
+    // 3D Efektleri Başlatma
     function init3DEffects() {
         const terminal = document.getElementById('terminal');
         if (!terminal) return; 
 
-        // Terminalin başlangıç transformu (ortalanmış ve döndürülmemiş)
         terminal.style.transform = 'translate(-50%, -50%) rotateY(0deg) rotateX(0deg)';
-        terminal.style.transition = 'transform 0.3s ease'; // Diğer transformlar için transition kalsın
+        terminal.style.transition = 'transform 0.3s ease';
     }
 
     // Tema Değiştirme Butonu
@@ -1879,10 +1861,8 @@ Siber Güvenlik Terminali v3.0
         if (welcomeOverlay) {
             welcomeOverlay.classList.remove('visible');
         }
-        // Popup kapandıktan sonra terminali göster
         showTerminal();
     }
-
 
     // Uygulama Başlatma
     window.addEventListener('DOMContentLoaded', () => {
@@ -1893,18 +1873,14 @@ Siber Güvenlik Terminali v3.0
         getBrowserOS();
         visitCount();
         
-        // Önce hoş geldin popup'ını göster
         showWelcomePopup();
 
-        // Popup kapatıldıktan sonra veya 5 saniye sonra terminali başlat
         setTimeout(() => {
-            // Eğer popup hala açıksa otomatik kapat
             if (welcomeOverlay && welcomeOverlay.classList.contains('visible')) {
                 closeWelcomePopup();
             }
-            // Başlangıç mesajlarını appendOutput ile gönder
             appendOutput("🛠️ Komut listesi için 'help' yazın");
-        }, 5000); // 5 saniye sonra otomatik kapanacak, sonra terminal mesajları gelecek
+        }, 5000);
     });
 </script>
 </body>
